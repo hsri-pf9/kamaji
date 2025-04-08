@@ -1,0 +1,97 @@
+name: Go Security Scans
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  govulncheck:
+    name: Go Vulnerability Check (govulncheck)
+    runs-on: ubuntu-latest
+    # continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Install govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Run govulncheck
+        run: govulncheck ./...
+
+  osvscanner:
+    name: OSV Scanner (Dependency Scan)
+    runs-on: ubuntu-latest
+    # continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install osv-scanner
+        run: |
+          set -e
+          echo "Fetching latest osv-scanner version..."
+          OSV_VERSION=$(curl -s https://api.github.com/repos/google/osv-scanner/releases/latest | grep '"tag_name":' | cut -d '"' -f 4)
+          echo "Latest version: $OSV_VERSION"
+          FILE_NAME="osv-scanner_${OSV_VERSION#v}_linux_amd64.zip"
+          echo "Downloading $FILE_NAME..."
+          curl -sSfL "https://github.com/google/osv-scanner/releases/download/${OSV_VERSION}/${FILE_NAME}" -o osv-scanner.zip
+          unzip osv-scanner.zip
+          chmod +x osv-scanner
+          sudo mv osv-scanner /usr/local/bin/
+
+      - name: Run osv-scanner
+        run: osv-scanner -r .
+
+  golangci:
+    name: Lint Check (golangci-lint)
+    runs-on: ubuntu-latest
+    # continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.54.2
+          args: --timeout 5m --config .golangci.yml
+
+  gosec:
+    name: Static Code Analysis (gosec)
+    runs-on: ubuntu-latest
+    # continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Install gosec
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Run gosec
+        run: gosec ./...
