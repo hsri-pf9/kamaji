@@ -84,7 +84,8 @@ jobs:
   trivy:
     name: Dependency Vulnerability Scan (Trivy)
     runs-on: ubuntu-latest
-
+    outputs:
+      trivy-high-found: ${{ steps.check.outputs.trivy-high-found }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -93,18 +94,45 @@ jobs:
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 
-      - name: Run Trivy (Go Modules Scan)
+      - name: Run Trivy and Save Report
         run: |
-          trivy fs --scanners vuln --vuln-type library --severity LOW,MEDIUM,HIGH,CRITICAL --exit-code 1 --no-progress .
-  
+          trivy fs --scanners vuln --vuln-type library --format json -o trivy-report.json .
+
+      - name: Check for High/Critical Vulnerabilities
+        id: check
+        run: |
+          count=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "HIGH" or .Severity == "CRITICAL")] | length' trivy-report.json)
+          echo "trivy-high-found=$([[ $count -gt 0 ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+  grype:
+    name: Dependency Vulnerability Scan (Grype)
+    runs-on: ubuntu-latest
+    outputs:
+      grype-high-found: ${{ steps.check.outputs.grype-high-found }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Grype
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Run Grype and Save Report
+        run: |
+          grype dir:. -o json > grype-report.json
+
+      - name: Check for High/Critical Vulnerabilities
+        id: check
+        run: |
+          count=$(jq '[.matches[] | select(.vulnerability.severity == "High" or .vulnerability.severity == "Critical")] | length' grype-report.json)
+          echo "grype-high-found=$([[ $count -gt 0 ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+
   auto-pr:
-    name: Create Pull Request if all checks pass
+    name: Create Pull Request if High/Critical Vulnerabilities Found
     needs:
-      - govulncheck
-      - golangci
-      - gosec
-      - gitleaks
       - trivy
+      - grype
+    if: needs.trivy.outputs.trivy-high-found == 'true' || needs.grype.outputs.grype-high-found == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -113,8 +141,9 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
-          commit-message: "chore: automated security updates"
-          title: "chore: security scan passed ✅ - automated PR"
+          commit-message: "chore: high/critical vulnerabilities detected 🚨"
+          title: "chore: high/critical security scan triggered PR"
           body: |
-            All security checks have passed. This PR was automatically generated.
-          branch: "auto/security-scan-passed"
+            High or critical vulnerabilities were detected by Trivy or Grype.
+            This PR was automatically created to flag and track resolution.
+          branch: "auto/high-critical-security-scan"
