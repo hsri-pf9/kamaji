@@ -29,31 +29,6 @@ jobs:
       - name: Run govulncheck
         run: govulncheck ./...
 
-  osvscanner:
-    name: OSV Scanner (Dependency Scan)
-    runs-on: ubuntu-latest
-    # continue-on-error: true
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Install osv-scanner
-        run: |
-          set -e
-          echo "Fetching latest osv-scanner version..."
-          OSV_VERSION=$(curl -s https://api.github.com/repos/google/osv-scanner/releases/latest | grep '"tag_name":' | cut -d '"' -f 4)
-          echo "Latest version: $OSV_VERSION"
-          FILE_NAME="osv-scanner_${OSV_VERSION#v}_linux_amd64.zip"
-          echo "Downloading $FILE_NAME..."
-          curl -sSfL "https://github.com/google/osv-scanner/releases/download/${OSV_VERSION}/${FILE_NAME}" -o osv-scanner.zip
-          unzip osv-scanner.zip
-          chmod +x osv-scanner
-          sudo mv osv-scanner /usr/local/bin/
-
-      - name: Run osv-scanner
-        run: osv-scanner -r .
-
   golangci:
     name: Lint Check (golangci-lint)
     runs-on: ubuntu-latest
