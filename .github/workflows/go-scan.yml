@@ -80,3 +80,21 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         with:
           args: detect --no-git -v
+
+  trivy:
+    name: Dependency Vulnerability Scan (Trivy)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.51.1_Linux-64bit.deb
+          sudo dpkg -i trivy_0.51.1_Linux-64bit.deb
+
+      - name: Run Trivy (Go Modules Scan)
+        run: |
+          trivy fs --scanners vuln --vuln-type library --severity LOW,MEDIUM,HIGH,CRITICAL .
