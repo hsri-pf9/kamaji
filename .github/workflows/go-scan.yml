@@ -96,3 +96,25 @@ jobs:
       - name: Run Trivy (Go Modules Scan)
         run: |
           trivy fs --scanners vuln --vuln-type library --severity LOW,MEDIUM,HIGH,CRITICAL --exit-code 1 --no-progress .
+  
+  auto-pr:
+    name: Create Pull Request if all checks pass
+    needs:
+      - govulncheck
+      - golangci
+      - gosec
+      - gitleaks
+      - trivy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: "chore: automated security updates"
+          title: "chore: security scan passed ✅ - automated PR"
+          body: |
+            All security checks have passed. This PR was automatically generated.
+          branch: "auto/security-scan-passed"
