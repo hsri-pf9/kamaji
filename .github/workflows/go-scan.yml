@@ -97,6 +97,9 @@ jobs:
       - name: Run Trivy and Save Report
         run: |
           trivy fs --scanners vuln --vuln-type library --format json -o trivy-report.json .
+          
+      - name: Show Trivy Report in Logs
+        run: cat trivy-report.json
 
       - name: Check for High/Critical Vulnerabilities
         id: check
@@ -120,6 +123,9 @@ jobs:
       - name: Run Grype and Save Report
         run: |
           grype dir:. -o json > grype-report.json
+
+      - name: Show Grype Report in Logs
+        run: cat grype-report.json
 
       - name: Check for High/Critical Vulnerabilities
         id: check
