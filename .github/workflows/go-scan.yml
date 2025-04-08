@@ -82,7 +82,7 @@ jobs:
           args: detect --no-git -v
 
   trivy:
-    name: Dependency Vulnerability Scan (Trivy)
+    name: (Trivy) Dependency Vulnerability Scan
     runs-on: ubuntu-latest
     outputs:
       trivy-high-found: ${{ steps.check.outputs.trivy-high-found }}
@@ -105,7 +105,7 @@ jobs:
           echo "trivy-high-found=$([[ $count -gt 0 ]] && echo true || echo false)" >> $GITHUB_OUTPUT
 
   grype:
-    name: Dependency Vulnerability Scan (Grype)
+    name: (Grype) Dependency Vulnerability Scan 
     runs-on: ubuntu-latest
     outputs:
       grype-high-found: ${{ steps.check.outputs.grype-high-found }}
