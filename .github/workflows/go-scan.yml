@@ -95,4 +95,9 @@ jobs:
 
       - name: Run Trivy (Go Modules Scan)
         run: |
-          trivy fs --scanners vuln --vuln-type library --severity LOW,MEDIUM,HIGH,CRITICAL .
+         trivy fs \
+            --scanners vuln \
+            --vuln-type library \
+            --severity LOW,MEDIUM,HIGH,CRITICAL \
+            --exit-code 1 \
+            --no-progress \
