@@ -107,38 +107,11 @@ jobs:
           count=$(jq '[.Results[].Vulnerabilities[] | select(.Severity == "HIGH" or .Severity == "CRITICAL")] | length' trivy-report.json)
           echo "trivy-high-found=$([[ $count -gt 0 ]] && echo true || echo false)" >> $GITHUB_OUTPUT
 
-  grype:
-    name: (Grype) Dependency Vulnerability Scan 
-    runs-on: ubuntu-latest
-    outputs:
-      grype-high-found: ${{ steps.check.outputs.grype-high-found }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Install Grype
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
-
-      - name: Run Grype and Save Report
-        run: |
-          grype dir:. -o json > grype-report.json
-
-      - name: Show Grype Report in Logs
-        run: cat grype-report.json
-
-      - name: Check for High/Critical Vulnerabilities
-        id: check
-        run: |
-          count=$(jq '[.matches[] | select(.vulnerability.severity == "High" or .vulnerability.severity == "Critical")] | length' grype-report.json)
-          echo "grype-high-found=$([[ $count -gt 0 ]] && echo true || echo false)" >> $GITHUB_OUTPUT
-
   auto-pr:
     name: Create Pull Request if High/Critical Vulnerabilities Found
     needs:
       - trivy
-      - grype
-    if: needs.trivy.outputs.trivy-high-found == 'true' || needs.grype.outputs.grype-high-found == 'true'
+    if: needs.trivy.outputs.trivy-high-found == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
